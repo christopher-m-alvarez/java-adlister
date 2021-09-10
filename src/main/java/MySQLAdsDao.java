@@ -2,50 +2,67 @@ import com.mysql.cj.jdbc.Driver;
 import jdbc.Config;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.List;
 
-public class MySQLAdsDao implements Ads{
+public class MySQLAdsDao implements Ads {
 
-    public static void main(String[] args) throws SQLException {
-        Config config = new Config();
+    private Connection connection = null;
 
-        DriverManager.registerDriver(new Driver());
-        Connection connection = DriverManager.getConnection(
-                config.getUrl(),
-                config.getUser(),
-                config.getPassword()
-        );
-
-
-        Statement statement = connection.createStatement();
-        ResultSet rows = statement.executeQuery("select u.name, u.email from ads as u");
-
-
-        while (rows.next()){
-            // rows points to the current row
-            //output name and email of current row
-            int currentUserId = rows.getInt("id");
-            String currentUserName = rows.getString("Ad");
-            String currentUserEmail = rows.getString("email");
-            System.out.println(currentUserId + " " + currentUserName + " " + currentUserEmail);
+    public MySQLAdsDao(Config config) {
+        try {
+            DriverManager.registerDriver(new Driver());
+            connection = DriverManager.getConnection(
+                    config.getUrl(),
+                    config.getUser(),
+                    config.getPassword()
+            );
+        } catch (
+                SQLException e) {
+            e.printStackTrace();
         }
-
-
-        int numRows = statement.executeUpdate("insert into ads(name, email, role_id) values ('Tom Jones', 'tom@tom.com'),4)", Statement.RETURN_GENERATED_KEYS);
-        if(numRows < 1) {
-            System.out.println("did not make an ad");
-            rows.close();
-            statement.close();
-            connection.close();
-            System.exit(1);
-        }
-        System.out.println(numRows + "Ad inserted");
 
     }
 
 
     @Override
     public List<Ad> all() {
+
+        List<Ad> ads = new ArrayList<>();
+
+        try {
+            Statement stmt = connection.createStatement();
+            ResultSet rs = stmt.executeQuery("select * from ads");
+
+            while (rs.next()) {
+                ads.add(new Ad(
+                        rs.getLong("id"),
+                        rs.getLong("user_id"),
+                        rs.getString("title"),
+                        rs.getString("description")
+                ));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return ads;
+    }
+
+    @Override
+    public Long insert(Ad ad){
+
+        String query = String.format("insert into ads(user_id, title, description) values(%s, '%s', '%s')", ad.getUserId(), ad.getTitle(), ad.getDescription());
+
+        try {
+            Statement stmt = connection.createStatement();
+            stmt.executeUpdate(query, Statement.RETURN_GENERATED_KEYS);
+            ResultSet rs = stmt.getGeneratedKeys();
+            return rs.getLong(1);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
         return null;
     }
+
 }

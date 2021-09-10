@@ -8,6 +8,6 @@ public class Config {
             return "root";
         }
         public String getPassword() {
-            return "password";
+            return "";
         }
 }
